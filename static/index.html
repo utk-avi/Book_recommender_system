@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book Recommender</title>
+    <style>
+        body { font-family: Arial; margin: 50px; }
+        input, button { padding: 10px; margin: 5px; width: 300px; }
+        .book-row { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<h2>📚 Personalized Book Recommendation System</h2>
+
+<label>Your Name:</label><br>
+<input id="username" placeholder="Enter your name"><br><br>
+
+<h3>Enter Your Book Preferences</h3>
+
+<div id="books-list"></div>
+
+<button onclick="addBook()">➕ Add Book</button>
+<br><br>
+
+<button onclick="getRecommendations()">✨ Get Recommendations</button>
+
+<h3>Recommended Books:</h3>
+<ul id="rec-output"></ul>
+
+<script>
+function addBook() {
+    let div = document.createElement("div");
+    div.className = "book-row";
+    div.innerHTML = `
+        <input class="title" placeholder="Book Title">
+        <input class="rating" placeholder="Rating (0–5)" type="number" step="0.5">
+    `;
+    document.getElementById("books-list").appendChild(div);
+}
+
+async function getRecommendations() {
+    const rows = document.querySelectorAll(".book-row");
+
+    let preferences = [];
+
+    rows.forEach(r => {
+        const title = r.querySelector(".title").value;
+        const rating = parseFloat(r.querySelector(".rating").value || 0);
+
+        if (title.trim() !== "") {
+            preferences.push({ title, rating });
+        }
+    });
+
+    const response = await fetch("/recommend", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ preferences })
+    });
+
+    const data = await response.json();
+    const recs = data.recommendations;
+
+    let output = document.getElementById("rec-output");
+    output.innerHTML = "";
+
+    recs.forEach(book => {
+        let li = document.createElement("li");
+        li.innerText = book;
+        output.appendChild(li);
+    });
+}
+</script>
+
+</body>
+</html>
