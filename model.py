@@ -73,7 +73,7 @@ for book in Aviral_preference['title']:
 # Make ranked recommendations:
 ranked_recommendations = sorted(final_scores.items(), key=lambda x: x[1], reverse=True)
 
-print("\n📚 Your Weighted Personalized Recommendations:\n")
+print("\n Your Weighted Personalized Recommendations:\n")
 for book, score in ranked_recommendations[:10]:
     print(f"→ {book}")
 
