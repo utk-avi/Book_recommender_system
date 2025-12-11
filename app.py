@@ -5,60 +5,60 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__, static_folder="static")
 
-# -------------------------------
-# Load Dataset
-# -------------------------------
+# ==========================================
+# LOAD DATA & MODELS ONCE (Critical for memory)
+# ==========================================
 
+# Load only needed columns
 books_df = pd.read_csv("books.csv", usecols=[0, 1, 2, 3])
 
-# Create text features (title + authors)
+# Create combined text feature
 books_df["features"] = (
     books_df["title"].astype(str) + " " + books_df["authors"].astype(str)
 )
 
-# Build TF-IDF model
-tfidf = TfidfVectorizer(stop_words='english')
-tfidf_matrix = tfidf.fit_transform(books_df['features'])
+# Initialize TF-IDF model
+tfidf = TfidfVectorizer(stop_words="english")
+tfidf_matrix = tfidf.fit_transform(books_df["features"])
 
-# Precompute cosine similarities
+# Precompute cosine similarity
 similarity_matrix = cosine_similarity(tfidf_matrix)
 
-
-# -------------------------------
-# Recommendation Function
-# -------------------------------
+# ==========================================
+# Recommendation Logic
+# ==========================================
 
 def weighted_recommend(book_title, weight, n=50):
+    """Returns weighted recommendations for a given book."""
     try:
-        index = books_df[books_df['title'] == book_title].index[0]
+        index = books_df[books_df["title"] == book_title].index[0]
     except IndexError:
         return []
 
     sim_scores = list(enumerate(similarity_matrix[index]))
 
+    # apply weight
     weighted_scores = [(i, score * weight) for i, score in sim_scores]
     weighted_scores = sorted(weighted_scores, key=lambda x: x[1], reverse=True)
 
+    # return top N book titles
     rec_books = [
-        books_df.iloc[i[0]]['title']
-        for i in weighted_scores[1:n + 1]
+        books_df.iloc[i[0]]["title"]
+        for i in weighted_scores[1:n + 1]  # skip itself
     ]
     return rec_books
 
-
-# -------------------------------
-# API ROUTES
-# -------------------------------
+# ==========================================
+# ROUTES
+# ==========================================
 
 @app.route("/")
 def serve_frontend():
     return send_from_directory("static", "index.html")
 
-
 @app.route("/recommend", methods=["POST"])
 def recommend():
     data = request.json
-
     user_prefs = data["preferences"]  # [{title, rating}, ...]
 
     final_scores = {}
@@ -75,14 +75,23 @@ def recommend():
                 final_scores[r] = final_scores.get(r, 0) + rating
 
     ranked = sorted(final_scores.items(), key=lambda x: x[1], reverse=True)
-    ranked = [r[0] for r in ranked[:10]]  # return top 10
+    ranked = [r[0] for r in ranked[:10]]  # top 10
 
     return jsonify({"recommendations": ranked})
+
+# ==========================================
+# RUN LOCAL ONLY (Render uses gunicorn)
+# ==========================================
 
 import os
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
+
+
+       
+    
 
 
