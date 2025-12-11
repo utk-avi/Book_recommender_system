@@ -21,32 +21,29 @@ books_df["features"] = (
 tfidf = TfidfVectorizer(stop_words="english")
 tfidf_matrix = tfidf.fit_transform(books_df["features"])
 
-# Precompute cosine similarity
-similarity_matrix = cosine_similarity(tfidf_matrix)
-
 # ==========================================
 # Recommendation Logic
 # ==========================================
 
 def weighted_recommend(book_title, weight, n=50):
-    """Returns weighted recommendations for a given book."""
+    """Compute similarity only for the selected book (MUCH lower RAM)."""
     try:
         index = books_df[books_df["title"] == book_title].index[0]
     except IndexError:
         return []
 
-    sim_scores = list(enumerate(similarity_matrix[index]))
+    # compute similarity only against ONE row instead of N×N matrix
+    sims = cosine_similarity(tfidf_matrix[index], tfidf_matrix)[0]
 
     # apply weight
-    weighted_scores = [(i, score * weight) for i, score in sim_scores]
-    weighted_scores = sorted(weighted_scores, key=lambda x: x[1], reverse=True)
+    sims = sims * weight
 
-    # return top N book titles
-    rec_books = [
-        books_df.iloc[i[0]]["title"]
-        for i in weighted_scores[1:n + 1]  # skip itself
-    ]
-    return rec_books
+    # get top N similar indices (excluding itself)
+    top_indices = sims.argsort()[::-1][1:n+1]
+
+    # return titles
+    return books_df.iloc[top_indices]["title"].tolist()
+
 
 # ==========================================
 # ROUTES
